@@ -1,15 +1,87 @@
 import 'package:flutter/material.dart';
 import 'package:droute_frontend/styles/color/app_color.dart';
+import 'package:droute_frontend/models/auth_model.dart';
+import 'package:droute_frontend/screens/auth/signin.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
-
   @override
   State<SignUpPage> createState() => _SignUpPageState();
 }
 
 class _SignUpPageState extends State<SignUpPage> {
-  String? selectedValue = "User";
+  final AuthModel _authModel = AuthModel();
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _mobileController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+
+  bool _isLoading = false;
+  String? _errorMessage;
+  Color _errorMessageColor = Colors.red;
+
+  // Request OTP action
+  Future<void> _requestOtp() async {
+
+    if (_fullNameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty ||_mobileController.text.isEmpty || _confirmPasswordController.text.isEmpty) {
+      _errorMessage = "Please Enter All given Fields!";
+      _errorMessageColor = Colors.red;
+
+      return;
+    };
+
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      setState(() {
+        _errorMessage = "Passwords do not match!";
+        _errorMessageColor = Colors.red;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final otpResponse = await _authModel.otpRequest(_emailController.text);
+      print("signup sent otp" + otpResponse);
+      // Handle OTP response and navigate to OTP page
+      if (otpResponse.isNotEmpty) {
+        setState(() {
+          _errorMessage = "OTP sent successfully!";
+          _errorMessageColor = Colors.green;
+        });
+        Navigator.pushNamed(
+          context,
+          '/otp',
+          arguments: {
+            'fullName': _fullNameController.text,
+            'email': _emailController.text,
+            'mobile': _mobileController.text,
+            'password': _passwordController.text,
+            'otpResponse': otpResponse,
+          },
+        );
+      } else {
+        setState(() {
+          _errorMessage = "OTP request failed!";
+          _errorMessageColor = Colors.red;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = "An error occurred: $e";
+        _errorMessageColor = Colors.red;
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,108 +89,97 @@ class _SignUpPageState extends State<SignUpPage> {
       backgroundColor: AppColor.deepOceanBlue,
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: BouncingScrollPhysics(),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Logo section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Center(
-                    child: Image.asset(
-                      'assets/images/droute_logo.png', // Path to your logo
-                      width: 200, // Adjust size as needed
-                      height: 200,
-                    ),
-                  ),
-                ],
+              SizedBox(height: MediaQuery.of(context).size.height * 0.05),
+              Center(
+                child: Image.asset(
+                  'assets/images/droute_logo.png',
+                  width: 200,
+                  height: 170,
+                ),
               ),
-
-              // Form section with padding and styling
+              SizedBox(height: 30),
               Container(
-                margin: const EdgeInsets.only(top: 50),
-                decoration: const BoxDecoration(
+                width: double.infinity,
+                decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
                   ),
                 ),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 50),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Sign Up",
-                      style: TextStyle(
-                        fontFamily: 'TimesNewRoman',
-                        fontSize: 20,
+                    Text(
+                      "Sign UP",
+                      style: const TextStyle(
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Flexible(
-                          child: RadioListTile<String>(
-                            title: const Text("User"),
-                            value: "User",
-                            groupValue: selectedValue,
-                            onChanged: (value) {
-                              setState(() {
-                                selectedValue = value;
-                              });
-                            },
-                          ),
-                        ),
-                        Flexible(
-                          child: RadioListTile<String>(
-                            title: const Text("Driver"),
-                            value: "Driver",
-                            groupValue: selectedValue,
-                            onChanged: (value) {
-                              setState(() {
-                                selectedValue = value;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
+                    SizedBox(height: 10),
+                    CustomText(text: "Full Name:"),
+                    TextFormField(
+                      controller: _fullNameController,
+                      decoration: InputDecoration(hintText: "Enter Your Fullname"),
                     ),
                     const SizedBox(height: 16),
                     CustomText(text: "Email:"),
                     TextFormField(
-                      decoration: const InputDecoration(
-                        hintText: "Enter Email Id",
-                      ),
+                      controller: _emailController,
+                      decoration: InputDecoration(hintText: "Enter Email Id"),
                     ),
-                    const SizedBox(height: 10),
+
+                    SizedBox(height: 10),
                     CustomText(text: "Mobile Number:"),
                     TextFormField(
-                      decoration: const InputDecoration(
-                        hintText: "Enter Mobile Number",
-                      ),
+                      controller: _mobileController,
+                      decoration: InputDecoration(hintText: "Enter mobile Number"),
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     CustomText(text: "Password:"),
                     TextFormField(
-                      decoration: const InputDecoration(
-                        hintText: "Enter Password",
-                      ),
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(hintText: "Enter Password"),
                     ),
-                    const SizedBox(height: 10),
-                    CustomText(text: "Confirm Password:"),
+                    SizedBox(height: 10),
+                    CustomText(text: "Confirm Password"),
                     TextFormField(
-                      decoration: const InputDecoration(
-                        hintText: "Enter Confirm Password",
-                      ),
+                      controller: _confirmPasswordController,
+                      obscureText: true,
+                      decoration: InputDecoration(hintText: "Enter Confirm Password"),
                     ),
-                    const SizedBox(height: 15),
-                    InkWell(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/otp');
-                      },
+                    SizedBox(height: 10),
+
+                    if (_errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(color: _errorMessageColor),
+                        ),
+                      ),
+                    _isLoading
+                        ? Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: AppColor.deepOceanBlue,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                        : InkWell(
+                      onTap: _requestOtp,
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
@@ -127,30 +188,26 @@ class _SignUpPageState extends State<SignUpPage> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Text(
-                          "Sign Up",
+                          "Request OTP",
                           style: TextStyle(color: Colors.white),
                           textAlign: TextAlign.center,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+
+                    SizedBox(height: 16),
                     InkWell(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/signin');
+                      onTap: (){
+                        Navigator.push(context, MaterialPageRoute(builder: (context)=>SignInPage()));
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            "Already Have an Account?",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
+                          Text("Already Have an Account?", style: TextStyle(fontWeight: FontWeight.bold)),
+                          SizedBox(width: 5),
                           Text(
                             "Sign In",
-                            style: TextStyle(
-                              color: AppColor.deepOceanBlue,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(color: AppColor.deepOceanBlue, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -169,9 +226,6 @@ class _SignUpPageState extends State<SignUpPage> {
 Widget CustomText({required String text}) {
   return Text(
     text,
-    style: const TextStyle(
-      fontWeight: FontWeight.bold,
-      fontSize: 16,
-    ),
+    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
   );
 }
